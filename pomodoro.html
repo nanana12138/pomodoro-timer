@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍅 番茄钟</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --text: #e0e0e0;
+    --text-secondary: #a0a0b8;
+    --accent-work: #e74c3c;
+    --accent-short-break: #2ecc71;
+    --accent-long-break: #3498db;
+    --accent: var(--accent-work);
+    --ring-bg: #2a2a4a;
+    --btn-bg: #2a2a4a;
+    --btn-hover: #3a3a5a;
+    --border: #333355;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .app {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 40px 36px 32px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    width: 380px;
+    border: 1px solid var(--border);
+  }
+
+  /* ---- Phase Label ---- */
+  .phase-label {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    transition: color 0.35s;
+  }
+
+  /* ---- Timer Ring ---- */
+  .timer-ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 0 auto 20px;
+  }
+
+  .timer-ring-wrap svg {
+    transform: rotate(-90deg);
+    width: 260px;
+    height: 260px;
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: var(--ring-bg);
+    stroke-width: 10;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.9s linear, stroke 0.35s;
+  }
+
+  .timer-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .time-display {
+    font-size: 56px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .time-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+  }
+
+  /* ---- Session Counter ---- */
+  .session-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--btn-bg);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+  .session-counter .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    background: var(--ring-bg);
+    transition: background 0.3s;
+  }
+  .session-counter .dot.filled {
+    background: var(--accent-work);
+  }
+
+  /* ---- Controls ---- */
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  button {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 14px;
+    padding: 12px 24px;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    outline: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    font-size: 17px;
+    padding: 14px 36px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+    filter: brightness(0.9);
+  }
+
+  .btn-secondary {
+    background: var(--btn-bg);
+    color: var(--text);
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 12px;
+  }
+  .btn-secondary:hover {
+    background: var(--btn-hover);
+  }
+
+  .btn-icon {
+    background: var(--btn-bg);
+    color: var(--text);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-icon:hover {
+    background: var(--btn-hover);
+  }
+
+  /* ---- Settings Modal ---- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 32px 28px;
+    width: 340px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    text-align: left;
+  }
+  .modal h2 {
+    font-size: 20px;
+    margin-bottom: 24px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .modal label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal .field {
+    margin-bottom: 18px;
+  }
+  .modal input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    height: 6px;
+  }
+  .modal .range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .modal .range-val {
+    background: var(--btn-bg);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 52px;
+    text-align: center;
+    color: var(--accent);
+  }
+  .modal .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+    justify-content: flex-end;
+  }
+  .modal .modal-actions button {
+    padding: 10px 22px;
+    font-size: 14px;
+  }
+  .btn-save {
+    background: var(--accent);
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- 阶段标签 -->
+  <div class="phase-label" id="phaseLabel">🍅 专注</div>
+
+  <!-- 环形进度条 -->
+  <div class="timer-ring-wrap">
+    <svg viewBox="0 0 260 260">
+      <circle class="ring-bg" cx="130" cy="130" r="120"/>
+      <circle class="ring-progress" id="ringProgress" cx="130" cy="130" r="120"
+              stroke-dasharray="753.98" stroke-dashoffset="0"/>
+    </svg>
+    <div class="timer-text">
+      <div class="time-display" id="timeDisplay">25:00</div>
+      <div class="time-hint" id="timeHint">准备开始</div>
+    </div>
+  </div>
+
+  <!-- 番茄计数 -->
+  <div class="session-counter">
+    <span id="sessionDots"></span>
+    <span id="sessionLabel">0 个番茄</span>
+  </div>
+
+  <!-- 控制按钮 -->
+  <div class="controls">
+    <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
+    <button class="btn-primary" id="btnMain">▶ 开始</button>
+    <button class="btn-icon" id="btnReset" title="重置">↺</button>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>⚙️ 设置</h2>
+
+    <div class="field">
+      <label>🍅 工作时长（分钟）</label>
+      <div class="range-row">
+        <input type="range" id="workDuration" min="1" max="60" value="25" step="1">
+        <span class="range-val" id="workDurationVal">25</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>☕ 短休息时长（分钟）</label>
+      <div class="range-row">
+        <input type="range" id="shortBreakDuration" min="1" max="30" value="5" step="1">
+        <span class="range-val" id="shortBreakDurationVal">5</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>🌿 长休息时长（分钟）</label>
+      <div class="range-row">
+        <input type="range" id="longBreakDuration" min="5" max="45" value="15" step="1">
+        <span class="range-val" id="longBreakDurationVal">15</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>🔁 长休息间隔（几个番茄后）</label>
+      <div class="range-row">
+        <input type="range" id="longBreakInterval" min="2" max="6" value="4" step="1">
+        <span class="range-val" id="longBreakIntervalVal">4</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btnCancel">取消</button>
+      <button class="btn-save" id="btnSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 番茄钟核心逻辑
+// ============================================================
+
+// --- DOM 引用 ---
+const phaseLabel    = document.getElementById('phaseLabel');
+const ringProgress  = document.getElementById('ringProgress');
+const timeDisplay   = document.getElementById('timeDisplay');
+const timeHint      = document.getElementById('timeHint');
+const btnMain       = document.getElementById('btnMain');
+const sessionDots   = document.getElementById('sessionDots');
+const sessionLabel  = document.getElementById('sessionLabel');
+
+const modalOverlay        = document.getElementById('modalOverlay');
+const workDurationInput   = document.getElementById('workDuration');
+const shortBreakInput     = document.getElementById('shortBreakDuration');
+const longBreakInput      = document.getElementById('longBreakDuration');
+const longBreakIntervalIn = document.getElementById('longBreakInterval');
+
+// --- 常量 ---
+const RING_CIRCUMFERENCE = 2 * Math.PI * 120; // ~753.98
+
+// --- 状态 ---
+const PHASE = { WORK: 'work', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak' };
+
+let settings = {
+  workDuration: 25,         // 分钟
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  longBreakInterval: 4,
+};
+
+let state = {
+  phase: PHASE.WORK,
+  timeLeft: 25 * 60,        // 秒
+  totalTime: 25 * 60,       // 当前阶段总秒数
+  isRunning: false,
+  sessionsToday: 0,         // 今日完成番茄数
+  sessionInCycle: 0,        // 当前周期内番茄数 (0-based, 用于判断是否长休息)
+  dateKey: getDateKey(),
+  timerId: null,
+};
+
+// ============================================================
+// 初始化
+// ============================================================
+function init() {
+  loadSettings();
+  loadSessions();
+  ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+  ringProgress.style.strokeDashoffset = '0';
+  applyPhaseUI();
+  updateTimeDisplay();
+  updateSessionDots();
+  bindEvents();
+  bindSettingsEvents();
+}
+
+function getDateKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// 持久化：设置
+// ============================================================
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pomodoro-settings'));
+    if (saved && typeof saved === 'object') {
+      settings = { ...settings, ...saved };
+    }
+  } catch (_) { /* ignore */ }
+  state.timeLeft = settings.workDuration * 60;
+  state.totalTime = settings.workDuration * 60;
+  // 同步到滑块
+  workDurationInput.value = settings.workDuration;
+  shortBreakInput.value = settings.shortBreakDuration;
+  longBreakInput.value = settings.longBreakDuration;
+  longBreakIntervalIn.value = settings.longBreakInterval;
+  updateSliderLabels();
+}
+
+function saveSettings() {
+  settings.workDuration       = parseInt(workDurationInput.value);
+  settings.shortBreakDuration = parseInt(shortBreakInput.value);
+  settings.longBreakDuration  = parseInt(longBreakInput.value);
+  settings.longBreakInterval  = parseInt(longBreakIntervalIn.value);
+  localStorage.setItem('pomodoro-settings', JSON.stringify(settings));
+}
+
+// ============================================================
+// 持久化：今日番茄数
+// ============================================================
+function loadSessions() {
+  try {
+    const data = JSON.parse(localStorage.getItem('pomodoro-sessions'));
+    if (data && data.date === getDateKey()) {
+      state.sessionsToday = data.count || 0;
+    } else {
+      state.sessionsToday = 0;
+    }
+  } catch (_) {
+    state.sessionsToday = 0;
+  }
+}
+
+function saveSessions() {
+  localStorage.setItem('pomodoro-sessions', JSON.stringify({
+    date: getDateKey(),
+    count: state.sessionsToday,
+  }));
+}
+
+// ============================================================
+// UI 更新
+// ============================================================
+function applyPhaseUI() {
+  const root = document.documentElement;
+  switch (state.phase) {
+    case PHASE.WORK:
+      root.style.setProperty('--accent', 'var(--accent-work)');
+      phaseLabel.textContent = '🍅 专注';
+      timeHint.textContent = '保持专注';
+      break;
+    case PHASE.SHORT_BREAK:
+      root.style.setProperty('--accent', 'var(--accent-short-break)');
+      phaseLabel.textContent = '☕ 短休息';
+      timeHint.textContent = '稍作休息';
+      break;
+    case PHASE.LONG_BREAK:
+      root.style.setProperty('--accent', 'var(--accent-long-break)');
+      phaseLabel.textContent = '🌿 长休息';
+      timeHint.textContent = '充分放松';
+      break;
+  }
+  // 更新按钮主色
+  btnMain.style.background = getComputedStyle(root).getPropertyValue('--accent').trim();
+}
+
+function updateTimeDisplay() {
+  const m = Math.floor(state.timeLeft / 60);
+  const s = state.timeLeft % 60;
+  timeDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  // 更新环形进度
+  const progress = state.timeLeft / state.totalTime;
+  ringProgress.style.strokeDashoffset =
+    String(RING_CIRCUMFERENCE * (1 - progress));
+
+  // 更新页面标题
+  document.title = `${timeDisplay.textContent} - ${phaseLabel.textContent}`;
+}
+
+function updateSessionDots() {
+  const interval = settings.longBreakInterval;
+  const count = state.sessionInCycle;
+  let dotsHTML = '';
+  for (let i = 0; i < interval; i++) {
+    dotsHTML += `<span class="dot${i < count ? ' filled' : ''}"></span>`;
+  }
+  sessionDots.innerHTML = dotsHTML;
+  sessionLabel.textContent = `${state.sessionsToday} 个番茄`;
+}
+
+function updateSliderLabels() {
+  document.getElementById('workDurationVal').textContent = workDurationInput.value;
+  document.getElementById('shortBreakDurationVal').textContent = shortBreakInput.value;
+  document.getElementById('longBreakDurationVal').textContent = longBreakInput.value;
+  document.getElementById('longBreakIntervalVal').textContent = longBreakIntervalIn.value;
+}
+
+function updateBtnMain() {
+  if (state.isRunning) {
+    btnMain.textContent = '⏸ 暂停';
+  } else if (state.timeLeft < state.totalTime) {
+    btnMain.textContent = '▶ 继续';
+  } else {
+    btnMain.textContent = '▶ 开始';
+  }
+}
+
+// ============================================================
+// 计时器
+// ============================================================
+function startTimer() {
+  state.isRunning = true;
+  updateBtnMain();
+  timeHint.textContent = state.phase === PHASE.WORK ? '进行中...' : '休息中...';
+
+  state.timerId = setInterval(() => {
+    state.timeLeft--;
+
+    if (state.timeLeft <= 0) {
+      state.timeLeft = 0;
+      updateTimeDisplay();
+      onTimerComplete();
+      return;
+    }
+
+    updateTimeDisplay();
+  }, 1000);
+}
+
+function pauseTimer() {
+  state.isRunning = false;
+  clearInterval(state.timerId);
+  state.timerId = null;
+  updateBtnMain();
+  timeHint.textContent = '已暂停';
+}
+
+function resetTimer() {
+  pauseTimer();
+  state.timeLeft = state.totalTime;
+  updateTimeDisplay();
+  updateBtnMain();
+  timeHint.textContent = state.phase === PHASE.WORK ? '准备开始' : '休息一下';
+}
+
+function onTimerComplete() {
+  clearInterval(state.timerId);
+  state.timerId = null;
+  state.isRunning = false;
+  updateTimeDisplay();
+
+  playAlarm();
+  sendNotification();
+
+  if (state.phase === PHASE.WORK) {
+    // 完成一个番茄
+    state.sessionsToday++;
+    state.sessionInCycle++;
+    saveSessions();
+    updateSessionDots();
+
+    // 判断下一个阶段
+    if (state.sessionInCycle >= settings.longBreakInterval) {
+      state.phase = PHASE.LONG_BREAK;
+      state.totalTime = settings.longBreakDuration * 60;
+      state.sessionInCycle = 0;
+    } else {
+      state.phase = PHASE.SHORT_BREAK;
+      state.totalTime = settings.shortBreakDuration * 60;
+    }
+  } else {
+    // 休息结束 → 回到工作
+    state.phase = PHASE.WORK;
+    state.totalTime = settings.workDuration * 60;
+  }
+
+  state.timeLeft = state.totalTime;
+  applyPhaseUI();
+  updateTimeDisplay();
+  updateBtnMain();
+  updateSessionDots();
+  timeHint.textContent = state.phase === PHASE.WORK ? '准备开始' : '休息一下';
+
+  // 自动开始下一阶段
+  startTimer();
+}
+
+// ============================================================
+// 声音 (Web Audio API)
+// ============================================================
+function playAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // 三段短促 beep: 800Hz, 1000Hz, 1200Hz
+    const frequencies = [800, 1000, 1200];
+    const noteDuration = 0.15;  // 秒
+    const gap = 0.1;
+
+    frequencies.forEach((freq, i) => {
+      const startTime = ctx.currentTime + i * (noteDuration + gap);
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.5, startTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0, startTime + noteDuration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + noteDuration);
+    });
+
+    // 一长声完成提示
+    const finalStart = ctx.currentTime + frequencies.length * (noteDuration + gap) + 0.15;
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1400, finalStart);
+    gain2.gain.setValueAtTime(0, finalStart);
+    gain2.gain.linearRampToValueAtTime(0.4, finalStart + 0.03);
+    gain2.gain.linearRampToValueAtTime(0, finalStart + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(finalStart);
+    osc2.stop(finalStart + 0.5);
+  } catch (_) { /* 声音播放失败不影响功能 */ }
+}
+
+// ============================================================
+// 桌面通知
+// ============================================================
+function sendNotification() {
+  const title = state.phase === PHASE.WORK
+    ? '🍅 时间到！该休息了'
+    : '☕ 休息结束！开始工作吧';
+
+  const body = state.phase === PHASE.WORK
+    ? `太棒了！已完成 ${state.sessionsToday} 个番茄 🎉`
+    : '休息好了，继续加油！💪';
+
+  // 优先使用 Web Notification API
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '🍅', silent: true });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted') {
+          new Notification(title, { body, icon: '🍅', silent: true });
+        }
+      });
+    }
+  }
+}
+
+// ============================================================
+// 事件绑定
+// ============================================================
+function bindEvents() {
+  // 主按钮：开始 / 暂停
+  btnMain.addEventListener('click', () => {
+    if (state.isRunning) {
+      pauseTimer();
+    } else {
+      // 请求通知权限（首次交互时）
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      startTimer();
+    }
+  });
+
+  // 重置按钮
+  document.getElementById('btnReset').addEventListener('click', () => {
+    resetTimer();
+  });
+
+  // 设置按钮
+  document.getElementById('btnSettings').addEventListener('click', () => {
+    // 打开设置时暂停计时器
+    if (state.isRunning) {
+      pauseTimer();
+    }
+    // 同步当前值到滑块
+    workDurationInput.value = settings.workDuration;
+    shortBreakInput.value = settings.shortBreakDuration;
+    longBreakInput.value = settings.longBreakDuration;
+    longBreakIntervalIn.value = settings.longBreakInterval;
+    updateSliderLabels();
+    modalOverlay.classList.add('open');
+  });
+
+  // 键盘快捷键
+  document.addEventListener('keydown', (e) => {
+    if (modalOverlay.classList.contains('open')) return; // 弹窗打开时不响应
+    if (e.code === 'Space') {
+      e.preventDefault();
+      btnMain.click();
+    } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      resetTimer();
+    }
+  });
+}
+
+function bindSettingsEvents() {
+  // 滑块值实时更新
+  [workDurationInput, shortBreakInput, longBreakInput, longBreakIntervalIn].forEach(input => {
+    input.addEventListener('input', updateSliderLabels);
+  });
+
+  // 保存
+  document.getElementById('btnSave').addEventListener('click', () => {
+    saveSettings();
+
+    // 如果当前没在计时，且处于工作阶段，更新总时间
+    if (!state.isRunning && state.phase === PHASE.WORK && state.timeLeft === state.totalTime) {
+      state.totalTime = settings.workDuration * 60;
+      state.timeLeft = state.totalTime;
+      updateTimeDisplay();
+    }
+    if (!state.isRunning && state.phase === PHASE.SHORT_BREAK && state.timeLeft === state.totalTime) {
+      state.totalTime = settings.shortBreakDuration * 60;
+      state.timeLeft = state.totalTime;
+      updateTimeDisplay();
+    }
+    if (!state.isRunning && state.phase === PHASE.LONG_BREAK && state.timeLeft === state.totalTime) {
+      state.totalTime = settings.longBreakDuration * 60;
+      state.timeLeft = state.totalTime;
+      updateTimeDisplay();
+    }
+
+    modalOverlay.classList.remove('open');
+  });
+
+  // 取消
+  document.getElementById('btnCancel').addEventListener('click', () => {
+    modalOverlay.classList.remove('open');
+  });
+
+  // 点击遮罩关闭
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      modalOverlay.classList.remove('open');
+    }
+  });
+
+  // ESC 关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlay.classList.contains('open')) {
+      modalOverlay.classList.remove('open');
+    }
+  });
+}
+
+// ============================================================
+// 启动
+// ============================================================
+init();
+
+console.log('🍅 番茄钟已就绪！');
+console.log('  空格键 = 开始/暂停');
+console.log('  R 键  = 重置');
+console.log('  点击 ⚙️ 打开设置');
+</script>
+
+</body>
+</html>
