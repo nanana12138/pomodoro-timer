@@ -3,29 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍅 番茄钟</title>
+<title>番茄钟</title>
 <style>
+  /* ============================================================
+     Token System — Analog Instrument
+     A precision timer with the feel of a physical dial.
+     Palette avoids the three AI-default looks.
+     --------------------------------------------------------
+     bg: gallery wall — neutral, lets the object breathe
+     text: deep charcoal — serious but warm
+     accent: rich, burnished — like fired enamel on metal
+     ring: faint shadow — like a groove in paper
+     tick: barely there — precision without noise
+     ============================================================ */
   :root {
-    --bg: #1a1a2e;
-    --surface: #16213e;
-    --text: #e0e0e0;
-    --text-secondary: #a0a0b8;
-    --accent-work: #e74c3c;
-    --accent-short-break: #2ecc71;
-    --accent-long-break: #3498db;
-    --accent: var(--accent-work);
-    --ring-bg: #2a2a4a;
-    --btn-bg: #2a2a4a;
-    --btn-hover: #3a3a5a;
-    --border: #333355;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --bg:             #F4F2EE;
+    --text:           #22201D;
+    --text-dim:       #8A8780;
+    --accent-work:    #CE4A3A;
+    --accent-short:   #5C8C67;
+    --accent-long:    #6080A8;
+    --accent:         var(--accent-work);
+    --ring:           #DDD9D2;
+    --tick:           #C8C4BD;
+    --surface:        rgba(255,255,255,0.55);
+    --hover:          #EBE8E2;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-                 'Microsoft YaHei', sans-serif;
+                 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
     background: var(--bg);
     color: var(--text);
     display: flex;
@@ -34,57 +43,91 @@
     min-height: 100vh;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-font-smoothing: antialiased;
+    /* Subtle paper texture via CSS gradient */
+    background-image:
+      radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.02) 0%, transparent 70%);
   }
 
+  /* ---- App Shell ---- */
   .app {
-    background: var(--surface);
-    border-radius: 24px;
-    padding: 40px 36px 32px;
-    box-shadow: var(--shadow);
     text-align: center;
-    width: 380px;
-    border: 1px solid var(--border);
+    width: 400px;
+    padding: 48px 20px 36px;
   }
 
   /* ---- Phase Label ---- */
   .phase-label {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 500;
-    letter-spacing: 1px;
-    color: var(--accent);
-    margin-bottom: 16px;
-    text-transform: uppercase;
-    transition: color 0.35s;
+    letter-spacing: 2.5px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    transition: color 0.4s ease;
+    /* Small dot indicator before the label */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .phase-label::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: background 0.4s ease;
   }
 
-  /* ---- Timer Ring ---- */
+  /* ---- Timer Ring (Signature Element) ---- */
   .timer-ring-wrap {
     position: relative;
-    width: 260px;
-    height: 260px;
-    margin: 0 auto 20px;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 24px;
   }
 
   .timer-ring-wrap svg {
     transform: rotate(-90deg);
-    width: 260px;
-    height: 260px;
+    width: 280px;
+    height: 280px;
   }
 
+  /* Background ring — like a groove in metal */
   .ring-bg {
     fill: none;
-    stroke: var(--ring-bg);
-    stroke-width: 10;
+    stroke: var(--ring);
+    stroke-width: 2;
   }
 
+  /* Progress arc — the moving hand */
   .ring-progress {
     fill: none;
     stroke: var(--accent);
-    stroke-width: 10;
+    stroke-width: 2.5;
     stroke-linecap: round;
-    transition: stroke-dashoffset 0.9s linear, stroke 0.35s;
+    transition: stroke-dashoffset 0.95s linear, stroke 0.5s ease;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.08));
   }
 
+  /* Leading dot — like the tip of a physical hand */
+  .ring-dot {
+    fill: var(--accent);
+    transition: fill 0.5s ease;
+  }
+
+  /* Tick marks group */
+  .ticks line {
+    stroke: var(--tick);
+    stroke-width: 1;
+  }
+  /* Every 5th tick is slightly longer — like a real clock */
+  .ticks line.major {
+    stroke-width: 1.5;
+    stroke: var(--text-dim);
+    opacity: 0.5;
+  }
+
+  /* Timer text in center */
   .timer-text {
     position: absolute;
     inset: 0;
@@ -92,50 +135,56 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
   }
 
   .time-display {
-    font-size: 56px;
-    font-weight: 700;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'PingFang SC',
+                 'Microsoft YaHei', monospace;
+    font-size: 64px;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     line-height: 1;
+    color: var(--text);
   }
 
   .time-hint {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    transition: opacity 0.3s;
   }
 
-  /* ---- Session Counter ---- */
-  .session-counter {
+  /* ---- Session Dots — like mechanical tally marks ---- */
+  .session-track {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: var(--btn-bg);
-    border-radius: 20px;
-    padding: 6px 16px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 28px;
   }
-  .session-counter .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    background: var(--ring-bg);
-    transition: background 0.3s;
+  .session-track .mark {
+    width: 28px;
+    height: 2px;
+    background: var(--ring);
+    transition: background 0.3s, height 0.3s;
   }
-  .session-counter .dot.filled {
+  .session-track .mark.filled {
     background: var(--accent-work);
+    height: 3px;
+  }
+  .session-count {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
   }
 
   /* ---- Controls ---- */
   .controls {
     display: flex;
-    gap: 12px;
+    gap: 20px;
     justify-content: center;
     align-items: center;
   }
@@ -144,72 +193,78 @@
     border: none;
     cursor: pointer;
     font-family: inherit;
-    font-size: 15px;
-    font-weight: 500;
-    border-radius: 14px;
-    padding: 12px 24px;
-    transition: all 0.2s;
-    letter-spacing: 0.5px;
-    outline: none;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    font-size: 17px;
-    padding: 14px 36px;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  }
-  .btn-primary:hover {
-    filter: brightness(1.15);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-  }
-  .btn-primary:active {
-    transform: translateY(0);
-    filter: brightness(0.9);
-  }
-
-  .btn-secondary {
-    background: var(--btn-bg);
-    color: var(--text);
-    padding: 10px 16px;
     font-size: 14px;
-    border-radius: 12px;
-  }
-  .btn-secondary:hover {
-    background: var(--btn-hover);
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    outline: none;
+    background: none;
+    transition: all 0.2s ease;
   }
 
+  /* Secondary buttons — understated */
   .btn-icon {
-    background: var(--btn-bg);
-    color: var(--text);
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    padding: 0;
-    font-size: 20px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    background: transparent;
+    border: 1px solid transparent;
   }
   .btn-icon:hover {
-    background: var(--btn-hover);
+    background: var(--hover);
+    color: var(--text);
+    border-color: var(--ring);
+  }
+  .btn-icon:active {
+    background: var(--ring);
+  }
+  .btn-icon:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Primary button — the one bold element */
+  .btn-primary {
+    background: var(--text);
+    color: var(--bg);
+    font-size: 15px;
+    padding: 14px 40px;
+    border-radius: 28px;
+    letter-spacing: 1px;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .btn-primary:hover {
+    background: #3D3A36;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+    background: #11100E;
+  }
+  .btn-primary:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
   }
 
   /* ---- Settings Modal ---- */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(34,32,29,0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s;
+    transition: opacity 0.3s ease;
   }
   .modal-overlay.open {
     opacity: 1;
@@ -217,64 +272,99 @@
   }
 
   .modal {
-    background: var(--surface);
-    border-radius: 20px;
-    padding: 32px 28px;
-    width: 340px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    background: #FAFAF8;
+    border-radius: 18px;
+    padding: 36px 32px 28px;
+    width: 360px;
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.04),
+      0 8px 40px rgba(0,0,0,0.10);
     text-align: left;
   }
+  .modal::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 3px;
+    background: var(--text-dim);
+    opacity: 0.3;
+    border-radius: 2px;
+    margin: 0 auto 28px;
+  }
   .modal h2 {
-    font-size: 20px;
-    margin-bottom: 24px;
-    text-align: center;
-    font-weight: 600;
+    display: none; /* The small bar above serves as the visual header */
   }
   .modal label {
     display: block;
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    letter-spacing: 1.5px;
   }
   .modal .field {
-    margin-bottom: 18px;
+    margin-bottom: 22px;
   }
   .modal input[type="range"] {
     width: 100%;
-    accent-color: var(--accent);
-    height: 6px;
+    accent-color: var(--text);
+    height: 4px;
+    border-radius: 2px;
   }
   .modal .range-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
   }
   .modal .range-val {
-    background: var(--btn-bg);
-    border-radius: 8px;
-    padding: 4px 12px;
-    font-size: 15px;
-    font-weight: 600;
-    min-width: 52px;
-    text-align: center;
-    color: var(--accent);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 16px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+    text-align: right;
+    color: var(--text);
+    letter-spacing: 1px;
   }
   .modal .modal-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 28px;
+    gap: 12px;
+    margin-top: 32px;
     justify-content: flex-end;
   }
   .modal .modal-actions button {
     padding: 10px 22px;
-    font-size: 14px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    border-radius: 20px;
+  }
+  .btn-cancel {
+    color: var(--text-dim);
+    background: transparent;
+  }
+  .btn-cancel:hover {
+    color: var(--text);
+    background: var(--hover);
   }
   .btn-save {
-    background: var(--accent);
-    color: #fff;
+    color: var(--bg);
+    background: var(--text);
+  }
+  .btn-save:hover {
+    background: #3D3A36;
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 440px) {
+    .app { width: 100%; padding: 32px 16px 28px; }
+    .timer-ring-wrap { width: 240px; height: 240px; }
+    .timer-ring-wrap svg { width: 240px; height: 240px; }
+    .time-display { font-size: 50px; }
+  }
+
+  /* ---- Reduced Motion ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .ring-progress { transition: none; }
+    .btn-primary { transition: none; }
   }
 </style>
 </head>
@@ -283,14 +373,20 @@
 <div class="app" id="app">
 
   <!-- 阶段标签 -->
-  <div class="phase-label" id="phaseLabel">🍅 专注</div>
+  <div class="phase-label" id="phaseLabel">专注</div>
 
-  <!-- 环形进度条 -->
+  <!-- 环形进度条 + 刻度 -->
   <div class="timer-ring-wrap">
-    <svg viewBox="0 0 260 260">
-      <circle class="ring-bg" cx="130" cy="130" r="120"/>
-      <circle class="ring-progress" id="ringProgress" cx="130" cy="130" r="120"
-              stroke-dasharray="753.98" stroke-dashoffset="0"/>
+    <svg viewBox="0 0 280 280" id="timerSvg">
+      <!-- 刻度线由 JS 动态生成 -->
+      <g class="ticks" id="ticksGroup"></g>
+      <!-- 底环 -->
+      <circle class="ring-bg" cx="140" cy="140" r="126"/>
+      <!-- 进度弧 -->
+      <circle class="ring-progress" id="ringProgress" cx="140" cy="140" r="126"
+              stroke-dasharray="791.68" stroke-dashoffset="0"/>
+      <!-- 前导圆点 -->
+      <circle class="ring-dot" id="ringDot" cx="140" cy="14" r="3.5"/>
     </svg>
     <div class="timer-text">
       <div class="time-display" id="timeDisplay">25:00</div>
@@ -298,27 +394,37 @@
     </div>
   </div>
 
-  <!-- 番茄计数 -->
-  <div class="session-counter">
-    <span id="sessionDots"></span>
-    <span id="sessionLabel">0 个番茄</span>
+  <!-- 番茄进度标记 -->
+  <div class="session-track">
+    <span id="sessionMarks"></span>
+    <span class="session-count" id="sessionLabel">0 个番茄</span>
   </div>
 
   <!-- 控制按钮 -->
   <div class="controls">
-    <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
-    <button class="btn-primary" id="btnMain">▶ 开始</button>
-    <button class="btn-icon" id="btnReset" title="重置">↺</button>
+    <button class="btn-icon" id="btnSettings" title="设置" aria-label="打开设置">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+    <button class="btn-primary" id="btnMain" aria-label="开始计时">开始</button>
+    <button class="btn-icon" id="btnReset" title="重置" aria-label="重置计时">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"/>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+      </svg>
+    </button>
   </div>
 </div>
 
 <!-- 设置弹窗 -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <h2>⚙️ 设置</h2>
+    <h2>设置</h2>
 
     <div class="field">
-      <label>🍅 工作时长（分钟）</label>
+      <label>工作时长（分钟）</label>
       <div class="range-row">
         <input type="range" id="workDuration" min="1" max="60" value="25" step="1">
         <span class="range-val" id="workDurationVal">25</span>
@@ -326,7 +432,7 @@
     </div>
 
     <div class="field">
-      <label>☕ 短休息时长（分钟）</label>
+      <label>短休息时长（分钟）</label>
       <div class="range-row">
         <input type="range" id="shortBreakDuration" min="1" max="30" value="5" step="1">
         <span class="range-val" id="shortBreakDurationVal">5</span>
@@ -334,7 +440,7 @@
     </div>
 
     <div class="field">
-      <label>🌿 长休息时长（分钟）</label>
+      <label>长休息时长（分钟）</label>
       <div class="range-row">
         <input type="range" id="longBreakDuration" min="5" max="45" value="15" step="1">
         <span class="range-val" id="longBreakDurationVal">15</span>
@@ -342,7 +448,7 @@
     </div>
 
     <div class="field">
-      <label>🔁 长休息间隔（几个番茄后）</label>
+      <label>长休息间隔（几个番茄后）</label>
       <div class="range-row">
         <input type="range" id="longBreakInterval" min="2" max="6" value="4" step="1">
         <span class="range-val" id="longBreakIntervalVal">4</span>
@@ -350,7 +456,7 @@
     </div>
 
     <div class="modal-actions">
-      <button class="btn-secondary" id="btnCancel">取消</button>
+      <button class="btn-cancel" id="btnCancel">取消</button>
       <button class="btn-save" id="btnSave">保存</button>
     </div>
   </div>
@@ -364,11 +470,13 @@
 // --- DOM 引用 ---
 const phaseLabel    = document.getElementById('phaseLabel');
 const ringProgress  = document.getElementById('ringProgress');
+const ringDot       = document.getElementById('ringDot');
 const timeDisplay   = document.getElementById('timeDisplay');
 const timeHint      = document.getElementById('timeHint');
 const btnMain       = document.getElementById('btnMain');
-const sessionDots   = document.getElementById('sessionDots');
+const sessionMarks  = document.getElementById('sessionMarks');
 const sessionLabel  = document.getElementById('sessionLabel');
+const ticksGroup    = document.getElementById('ticksGroup');
 
 const modalOverlay        = document.getElementById('modalOverlay');
 const workDurationInput   = document.getElementById('workDuration');
@@ -377,13 +485,27 @@ const longBreakInput      = document.getElementById('longBreakDuration');
 const longBreakIntervalIn = document.getElementById('longBreakInterval');
 
 // --- 常量 ---
-const RING_CIRCUMFERENCE = 2 * Math.PI * 120; // ~753.98
+const R = 126;                      // 环半径
+const CENTER = 140;                 // SVG 中心
+const RING_CIRCUMFERENCE = 2 * Math.PI * R; // ~791.68
 
 // --- 状态 ---
 const PHASE = { WORK: 'work', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak' };
 
+const PHASE_LABELS = {
+  work:       '专注',
+  shortBreak: '短休息',
+  longBreak:  '长休息',
+};
+
+const PHASE_HINTS = {
+  work:       { idle: '准备开始', running: '计时中', paused: '已暂停' },
+  shortBreak: { idle: '稍作休息', running: '休息中', paused: '已暂停' },
+  longBreak:  { idle: '充分放松', running: '休息中', paused: '已暂停' },
+};
+
 let settings = {
-  workDuration: 25,         // 分钟
+  workDuration: 25,
   shortBreakDuration: 5,
   longBreakDuration: 15,
   longBreakInterval: 4,
@@ -391,14 +513,38 @@ let settings = {
 
 let state = {
   phase: PHASE.WORK,
-  timeLeft: 25 * 60,        // 秒
-  totalTime: 25 * 60,       // 当前阶段总秒数
+  timeLeft: 25 * 60,
+  totalTime: 25 * 60,
   isRunning: false,
-  sessionsToday: 0,         // 今日完成番茄数
-  sessionInCycle: 0,        // 当前周期内番茄数 (0-based, 用于判断是否长休息)
+  sessionsToday: 0,
+  sessionInCycle: 0,
   dateKey: getDateKey(),
   timerId: null,
 };
+
+// ============================================================
+// Tick marks — the signature detail
+// ============================================================
+function buildTickMarks(totalMinutes) {
+  ticksGroup.innerHTML = '';
+  const count = Math.min(totalMinutes, 60); // Cap at 60 ticks
+
+  for (let i = 0; i < count; i++) {
+    const angleDeg = (i / count) * 360 - 90; // Start from top (-90)
+    const angleRad = (angleDeg * Math.PI) / 180;
+
+    const outerR = R + 7;
+    const innerR = (i % 5 === 0) ? R + 1 : R + 4; // Every 5th tick is longer
+
+    const x1 = CENTER + innerR * Math.cos(angleRad);
+    const y1 = CENTER + innerR * Math.sin(angleRad);
+    const x2 = CENTER + outerR * Math.cos(angleRad);
+    const y2 = CENTER + outerR * Math.sin(angleRad);
+
+    const cls = (i % 5 === 0) ? ' class="major"' : '';
+    ticksGroup.innerHTML += `<line${cls} x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`;
+  }
+}
 
 // ============================================================
 // 初始化
@@ -408,9 +554,11 @@ function init() {
   loadSessions();
   ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
   ringProgress.style.strokeDashoffset = '0';
+  updateDotPosition(0);
+  buildTickMarks(settings.workDuration);
   applyPhaseUI();
   updateTimeDisplay();
-  updateSessionDots();
+  updateSessionMarks();
   bindEvents();
   bindSettingsEvents();
 }
@@ -421,7 +569,7 @@ function getDateKey() {
 }
 
 // ============================================================
-// 持久化：设置
+// 持久化
 // ============================================================
 function loadSettings() {
   try {
@@ -429,10 +577,9 @@ function loadSettings() {
     if (saved && typeof saved === 'object') {
       settings = { ...settings, ...saved };
     }
-  } catch (_) { /* ignore */ }
+  } catch (_) {}
   state.timeLeft = settings.workDuration * 60;
   state.totalTime = settings.workDuration * 60;
-  // 同步到滑块
   workDurationInput.value = settings.workDuration;
   shortBreakInput.value = settings.shortBreakDuration;
   longBreakInput.value = settings.longBreakDuration;
@@ -448,9 +595,6 @@ function saveSettings() {
   localStorage.setItem('pomodoro-settings', JSON.stringify(settings));
 }
 
-// ============================================================
-// 持久化：今日番茄数
-// ============================================================
 function loadSessions() {
   try {
     const data = JSON.parse(localStorage.getItem('pomodoro-sessions'));
@@ -479,22 +623,30 @@ function applyPhaseUI() {
   switch (state.phase) {
     case PHASE.WORK:
       root.style.setProperty('--accent', 'var(--accent-work)');
-      phaseLabel.textContent = '🍅 专注';
-      timeHint.textContent = '保持专注';
       break;
     case PHASE.SHORT_BREAK:
-      root.style.setProperty('--accent', 'var(--accent-short-break)');
-      phaseLabel.textContent = '☕ 短休息';
-      timeHint.textContent = '稍作休息';
+      root.style.setProperty('--accent', 'var(--accent-short)');
       break;
     case PHASE.LONG_BREAK:
-      root.style.setProperty('--accent', 'var(--accent-long-break)');
-      phaseLabel.textContent = '🌿 长休息';
-      timeHint.textContent = '充分放松';
+      root.style.setProperty('--accent', 'var(--accent-long)');
       break;
   }
-  // 更新按钮主色
-  btnMain.style.background = getComputedStyle(root).getPropertyValue('--accent').trim();
+  phaseLabel.textContent = PHASE_LABELS[state.phase];
+
+  // Update tick marks to match phase duration
+  const totalMin = Math.ceil(state.totalTime / 60);
+  buildTickMarks(totalMin);
+}
+
+function updateDotPosition(progress) {
+  // progress: 0 (full) to 1 (empty)
+  // Dot at the leading edge of the progress arc
+  const angleDeg = (1 - progress) * 360 - 90; // -90 to start from top
+  const angleRad = (angleDeg * Math.PI) / 180;
+  const dotX = CENTER + R * Math.cos(angleRad);
+  const dotY = CENTER + R * Math.sin(angleRad);
+  ringDot.setAttribute('cx', dotX.toFixed(2));
+  ringDot.setAttribute('cy', dotY.toFixed(2));
 }
 
 function updateTimeDisplay() {
@@ -507,18 +659,20 @@ function updateTimeDisplay() {
   ringProgress.style.strokeDashoffset =
     String(RING_CIRCUMFERENCE * (1 - progress));
 
-  // 更新页面标题
-  document.title = `${timeDisplay.textContent} - ${phaseLabel.textContent}`;
+  // 更新前导圆点位置
+  updateDotPosition(progress);
+
+  document.title = `${timeDisplay.textContent} · ${PHASE_LABELS[state.phase]}`;
 }
 
-function updateSessionDots() {
+function updateSessionMarks() {
   const interval = settings.longBreakInterval;
   const count = state.sessionInCycle;
-  let dotsHTML = '';
+  let html = '';
   for (let i = 0; i < interval; i++) {
-    dotsHTML += `<span class="dot${i < count ? ' filled' : ''}"></span>`;
+    html += `<span class="mark${i < count ? ' filled' : ''}"></span>`;
   }
-  sessionDots.innerHTML = dotsHTML;
+  sessionMarks.innerHTML = html;
   sessionLabel.textContent = `${state.sessionsToday} 个番茄`;
 }
 
@@ -531,12 +685,17 @@ function updateSliderLabels() {
 
 function updateBtnMain() {
   if (state.isRunning) {
-    btnMain.textContent = '⏸ 暂停';
+    btnMain.textContent = '暂停';
   } else if (state.timeLeft < state.totalTime) {
-    btnMain.textContent = '▶ 继续';
+    btnMain.textContent = '继续';
   } else {
-    btnMain.textContent = '▶ 开始';
+    btnMain.textContent = '开始';
   }
+}
+
+function updateHint(status) {
+  const hints = PHASE_HINTS[state.phase];
+  timeHint.textContent = hints[status] || '';
 }
 
 // ============================================================
@@ -545,7 +704,7 @@ function updateBtnMain() {
 function startTimer() {
   state.isRunning = true;
   updateBtnMain();
-  timeHint.textContent = state.phase === PHASE.WORK ? '进行中...' : '休息中...';
+  updateHint('running');
 
   state.timerId = setInterval(() => {
     state.timeLeft--;
@@ -566,7 +725,7 @@ function pauseTimer() {
   clearInterval(state.timerId);
   state.timerId = null;
   updateBtnMain();
-  timeHint.textContent = '已暂停';
+  updateHint('paused');
 }
 
 function resetTimer() {
@@ -574,7 +733,7 @@ function resetTimer() {
   state.timeLeft = state.totalTime;
   updateTimeDisplay();
   updateBtnMain();
-  timeHint.textContent = state.phase === PHASE.WORK ? '准备开始' : '休息一下';
+  updateHint('idle');
 }
 
 function onTimerComplete() {
@@ -587,13 +746,11 @@ function onTimerComplete() {
   sendNotification();
 
   if (state.phase === PHASE.WORK) {
-    // 完成一个番茄
     state.sessionsToday++;
     state.sessionInCycle++;
     saveSessions();
-    updateSessionDots();
+    updateSessionMarks();
 
-    // 判断下一个阶段
     if (state.sessionInCycle >= settings.longBreakInterval) {
       state.phase = PHASE.LONG_BREAK;
       state.totalTime = settings.longBreakDuration * 60;
@@ -603,7 +760,6 @@ function onTimerComplete() {
       state.totalTime = settings.shortBreakDuration * 60;
     }
   } else {
-    // 休息结束 → 回到工作
     state.phase = PHASE.WORK;
     state.totalTime = settings.workDuration * 60;
   }
@@ -612,8 +768,8 @@ function onTimerComplete() {
   applyPhaseUI();
   updateTimeDisplay();
   updateBtnMain();
-  updateSessionDots();
-  timeHint.textContent = state.phase === PHASE.WORK ? '准备开始' : '休息一下';
+  updateSessionMarks();
+  updateHint('idle');
 
   // 自动开始下一阶段
   startTimer();
@@ -625,46 +781,39 @@ function onTimerComplete() {
 function playAlarm() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // 三段短促 beep: 800Hz, 1000Hz, 1200Hz
-    const frequencies = [800, 1000, 1200];
-    const noteDuration = 0.15;  // 秒
-    const gap = 0.1;
+    const frequencies = [880, 1100, 1320];
+    const noteDuration = 0.12;
+    const gap = 0.08;
 
     frequencies.forEach((freq, i) => {
       const startTime = ctx.currentTime + i * (noteDuration + gap);
-
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, startTime);
-
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.5, startTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0.35, startTime + 0.015);
       gain.gain.linearRampToValueAtTime(0, startTime + noteDuration);
-
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.start(startTime);
-      osc.stop(startTime + noteDuration);
+      osc.stop(startTime + noteDuration + 0.01);
     });
 
-    // 一长声完成提示
-    const finalStart = ctx.currentTime + frequencies.length * (noteDuration + gap) + 0.15;
+    // Final note
+    const finalStart = ctx.currentTime + frequencies.length * (noteDuration + gap) + 0.12;
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1400, finalStart);
+    osc2.frequency.setValueAtTime(1568, finalStart);
     gain2.gain.setValueAtTime(0, finalStart);
-    gain2.gain.linearRampToValueAtTime(0.4, finalStart + 0.03);
-    gain2.gain.linearRampToValueAtTime(0, finalStart + 0.5);
+    gain2.gain.linearRampToValueAtTime(0.3, finalStart + 0.02);
+    gain2.gain.linearRampToValueAtTime(0, finalStart + 0.4);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
     osc2.start(finalStart);
-    osc2.stop(finalStart + 0.5);
-  } catch (_) { /* 声音播放失败不影响功能 */ }
+    osc2.stop(finalStart + 0.4 + 0.01);
+  } catch (_) {}
 }
 
 // ============================================================
@@ -672,21 +821,20 @@ function playAlarm() {
 // ============================================================
 function sendNotification() {
   const title = state.phase === PHASE.WORK
-    ? '🍅 时间到！该休息了'
-    : '☕ 休息结束！开始工作吧';
+    ? '时间到 · 该休息了'
+    : '休息结束 · 继续工作';
 
   const body = state.phase === PHASE.WORK
-    ? `太棒了！已完成 ${state.sessionsToday} 个番茄 🎉`
-    : '休息好了，继续加油！💪';
+    ? `已完成 ${state.sessionsToday} 个番茄`
+    : '保持节奏，继续加油';
 
-  // 优先使用 Web Notification API
   if ('Notification' in window) {
     if (Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '🍅', silent: true });
+      new Notification(title, { body, silent: true });
     } else if (Notification.permission !== 'denied') {
       Notification.requestPermission().then(perm => {
         if (perm === 'granted') {
-          new Notification(title, { body, icon: '🍅', silent: true });
+          new Notification(title, { body, silent: true });
         }
       });
     }
@@ -697,12 +845,10 @@ function sendNotification() {
 // 事件绑定
 // ============================================================
 function bindEvents() {
-  // 主按钮：开始 / 暂停
   btnMain.addEventListener('click', () => {
     if (state.isRunning) {
       pauseTimer();
     } else {
-      // 请求通知权限（首次交互时）
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
@@ -710,18 +856,12 @@ function bindEvents() {
     }
   });
 
-  // 重置按钮
   document.getElementById('btnReset').addEventListener('click', () => {
     resetTimer();
   });
 
-  // 设置按钮
   document.getElementById('btnSettings').addEventListener('click', () => {
-    // 打开设置时暂停计时器
-    if (state.isRunning) {
-      pauseTimer();
-    }
-    // 同步当前值到滑块
+    if (state.isRunning) pauseTimer();
     workDurationInput.value = settings.workDuration;
     shortBreakInput.value = settings.shortBreakDuration;
     longBreakInput.value = settings.longBreakDuration;
@@ -730,9 +870,8 @@ function bindEvents() {
     modalOverlay.classList.add('open');
   });
 
-  // 键盘快捷键
   document.addEventListener('keydown', (e) => {
-    if (modalOverlay.classList.contains('open')) return; // 弹窗打开时不响应
+    if (modalOverlay.classList.contains('open')) return;
     if (e.code === 'Space') {
       e.preventDefault();
       btnMain.click();
@@ -744,48 +883,39 @@ function bindEvents() {
 }
 
 function bindSettingsEvents() {
-  // 滑块值实时更新
   [workDurationInput, shortBreakInput, longBreakInput, longBreakIntervalIn].forEach(input => {
     input.addEventListener('input', updateSliderLabels);
   });
 
-  // 保存
   document.getElementById('btnSave').addEventListener('click', () => {
     saveSettings();
 
-    // 如果当前没在计时，且处于工作阶段，更新总时间
-    if (!state.isRunning && state.phase === PHASE.WORK && state.timeLeft === state.totalTime) {
-      state.totalTime = settings.workDuration * 60;
+    // Update current phase duration if idle and untouched
+    if (!state.isRunning && state.timeLeft === state.totalTime) {
+      if (state.phase === PHASE.WORK) {
+        state.totalTime = settings.workDuration * 60;
+      } else if (state.phase === PHASE.SHORT_BREAK) {
+        state.totalTime = settings.shortBreakDuration * 60;
+      } else if (state.phase === PHASE.LONG_BREAK) {
+        state.totalTime = settings.longBreakDuration * 60;
+      }
       state.timeLeft = state.totalTime;
+      applyPhaseUI();
       updateTimeDisplay();
-    }
-    if (!state.isRunning && state.phase === PHASE.SHORT_BREAK && state.timeLeft === state.totalTime) {
-      state.totalTime = settings.shortBreakDuration * 60;
-      state.timeLeft = state.totalTime;
-      updateTimeDisplay();
-    }
-    if (!state.isRunning && state.phase === PHASE.LONG_BREAK && state.timeLeft === state.totalTime) {
-      state.totalTime = settings.longBreakDuration * 60;
-      state.timeLeft = state.totalTime;
-      updateTimeDisplay();
+      updateSessionMarks();
     }
 
     modalOverlay.classList.remove('open');
   });
 
-  // 取消
   document.getElementById('btnCancel').addEventListener('click', () => {
     modalOverlay.classList.remove('open');
   });
 
-  // 点击遮罩关闭
   modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) {
-      modalOverlay.classList.remove('open');
-    }
+    if (e.target === modalOverlay) modalOverlay.classList.remove('open');
   });
 
-  // ESC 关闭
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modalOverlay.classList.contains('open')) {
       modalOverlay.classList.remove('open');
@@ -797,11 +927,7 @@ function bindSettingsEvents() {
 // 启动
 // ============================================================
 init();
-
-console.log('🍅 番茄钟已就绪！');
-console.log('  空格键 = 开始/暂停');
-console.log('  R 键  = 重置');
-console.log('  点击 ⚙️ 打开设置');
+console.log('番茄钟已就绪 · 空格开始/暂停 · R 重置');
 </script>
 
 </body>
